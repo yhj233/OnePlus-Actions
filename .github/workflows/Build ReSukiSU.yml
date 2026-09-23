@@ -534,10 +534,18 @@ jobs:
         run: |
           cd kernel_workspace/kernel_platform/common
           echo "⬇️ 下载 Droidspaces 5.10 kABI 补丁..."
+          
+          # 下载 sysvipc 补丁
           wget https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/main/GKI/5.10/GKI-5.10-sysvipc_kabi_6_7_8.patch -O droidspaces_sysvipc_kabi.patch
-          echo "📦 应用补丁..."
+          echo "📦 应用 sysvipc kABI 补丁..."
           patch -p1 < droidspaces_sysvipc_kabi.patch
-          echo "✅ Droidspaces kABI 补丁应用完成"
+          
+          # 下载并应用 posix 补丁（新增）
+          wget https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/main/GKI/5.10/GKI_5.10_posix.patch -O droidspaces_posix_kabi.patch
+          echo "📦 应用 POSIX_MQUEUE kABI 补丁..."
+          patch -p1 < droidspaces_posix_kabi.patch
+          
+          echo "✅ Droidspaces kABI 补丁全部应用完成"
 
 
       - name: "⚙️ Configure Kernel Options | 配置内核选项"
