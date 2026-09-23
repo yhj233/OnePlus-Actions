@@ -536,7 +536,7 @@ jobs:
           echo "⬇️ 下载 Droidspaces 5.10 kABI 补丁..."
           
           # 下载 sysvipc 补丁
-          wget https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/main/GKI/5.10/GKI-5.10-sysvipc_kabi_6_7_8.patch -O droidspaces_sysvipc_kabi.patch
+          wget https://raw.githubusercontent.com/ravindu644/Droidspaces-OSS/refs/heads/main/Documentation/resources/kernel-patches/GKI/below-kernel-6.12/001.GKI-below-6.12-fix_sysvipc_kabi_3_4_5.patch -O sysvipc_kabi.patch
           echo "📦 应用 sysvipc kABI 补丁..."
           patch -p1 < droidspaces_sysvipc_kabi.patch
           
@@ -649,13 +649,38 @@ jobs:
           # 跳过将uapi标准头安装到 usr/include 目录的不必要操作，节省编译时间
           echo "CONFIG_HEADERS_INSTALL=n" >> ./common/arch/arm64/configs/gki_defconfig
 
-          echo "📦 启用 Droidspaces 所需命名空间与功能..."
-          echo "CONFIG_SYSVIPC=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_POSIX_MQUEUE=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IPC_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_PID_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_DEVTMPFS=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_USER_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
+
+
+          echo "📦 安全配置 Droidspaces 所需选项 (逐个搜索替换)..."
+          DEFCONFIG=./common/arch/arm64/configs/gki_defconfig
+          set_config() {
+            local cfg="$1"
+            local val="$2"
+            if grep -q "^${cfg}=" "$DEFCONFIG" 2>/dev/null; then
+              sed -i "s/^${cfg}=.*/${cfg}=${val}/" "$DEFCONFIG"
+            elif grep -q "^# ${cfg} is not set" "$DEFCONFIG" 2>/dev/null; then
+              sed -i "s/^# ${cfg} is not set/${cfg}=${val}/" "$DEFCONFIG"
+            else
+              echo "${cfg}=${val}" >> "$DEFCONFIG"
+            fi
+          }
+          # ===== 必需配置 =====
+          # IPC
+          set_config CONFIG_SYSVIPC y
+          set_config CONFIG_POSIX_MQUEUE y
+          # 命名空间
+          set_config CONFIG_IPC_NS y
+          set_config CONFIG_PID_NS y
+          # 硬件访问支持
+          set_config CONFIG_DEVTMPFS y
+          # 网络（增强 NAT 支持）
+          set_config CONFIG_NETFILTER_XT_MATCH_ADDRTYPE y
+          # ===== 可选但建议 =====
+          # 修复 Docker unsafe procfs 错误
+          set_config CONFIG_USER_NS y
+          echo "✅ Droidspaces 配置完成 (逐个搜索替换)"
+
+          
 
           echo "⚡ Remove check_defconfig"
           sed -i 's/check_defconfig//' ./common/build.config.gki
