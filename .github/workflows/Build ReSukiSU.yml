@@ -528,7 +528,18 @@ jobs:
             patch -p1 -F 3 < hmbird_patch.patch
             echo "✅ OGKI转换GKI_patch完成"
           fi
-          
+
+
+      - name: "🛡️ Apply Droidspaces kABI Patch | 应用 Droidspaces kABI 补丁"
+        run: |
+          cd kernel_workspace/kernel_platform/common
+          echo "⬇️ 下载 Droidspaces 5.10 kABI 补丁..."
+          wget https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/main/GKI/5.10/GKI-5.10-sysvipc_kabi_6_7_8.patch -O droidspaces_sysvipc_kabi.patch
+          echo "📦 应用补丁..."
+          patch -p1 < droidspaces_sysvipc_kabi.patch
+          echo "✅ Droidspaces kABI 补丁应用完成"
+
+
       - name: "⚙️ Configure Kernel Options | 配置内核选项"
         run: |
           cd kernel_workspace/kernel_platform
@@ -629,14 +640,15 @@ jobs:
 
           # 跳过将uapi标准头安装到 usr/include 目录的不必要操作，节省编译时间
           echo "CONFIG_HEADERS_INSTALL=n" >> ./common/arch/arm64/configs/gki_defconfig
+
           echo "📦 启用 Droidspaces 所需命名空间与功能..."
-          echo "CONFIG_NAMESPACES=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_PID_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_IPC_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_SYSVIPC=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_POSIX_MQUEUE=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_IPC_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_PID_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_DEVTMPFS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_USER_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
-          
+
           echo "⚡ Remove check_defconfig"
           sed -i 's/check_defconfig//' ./common/build.config.gki
           echo "✅ 内核配置更新完成"
