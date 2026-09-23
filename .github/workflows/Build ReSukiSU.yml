@@ -21,7 +21,7 @@ on:
           - 'sm7635'
           - 'sm7550'
           - 'sm6375'
-        default: 'sm8650'
+        default: 'sm8475'
         
       FEIL:
         description: "手机型号"
@@ -62,7 +62,7 @@ on:
           - 'oneplus_nord_4_b'
           - 'oneplus_nord_ce4_lite_5g'
           - 'oneplus_nord_ce4_b'
-        default: 'oneplus_12_b'
+        default: 'oneplus_ace2_v'
         
       ANDROID_VERSION:
         description: "内核安卓KMI版本"
@@ -73,7 +73,7 @@ on:
           - 'android14'
           - 'android13'
           - 'android12'
-        default: 'android14'
+        default: 'android15'
         
       KERNEL_VERSION:
         description: "内核版本"
@@ -84,7 +84,7 @@ on:
           - '6.1'
           - '5.15'
           - '5.10'
-        default: '6.1'
+        default: '5.10'
 
       SUSFS:
         description: "是否启用SUSFS"
@@ -530,21 +530,22 @@ jobs:
           fi
 
 
-      - name: "🛡️ Apply Droidspaces kABI Patch | 应用 Droidspaces kABI 补丁"
+      - name: "🛡️ Apply Droidspaces kABI Patches | 应用 Droidspaces kABI 补丁"
         run: |
           cd kernel_workspace/kernel_platform/common
-          echo "⬇️ 下载 Droidspaces 5.10 kABI 补丁..."
-          
-          # 下载 sysvipc 补丁
-          wget https://github.com/ravindu644/Droidspaces-OSS/raw/refs/heads/main/Documentation/resources/kernel-patches/GKI/below-kernel-6.12/001.GKI-below-6.12-fix_sysvipc_kabi_1_2_3.patch -O sysvipc_kabi.patch
-          echo "📦 应用 sysvipc kABI 补丁..."
-          patch -p1 < sysvipc_kabi.patch
-          
-          # 下载并应用 posix 补丁（新增）
-          wget https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/main/GKI/5.10/GKI_5.10_posix.patch -O posix_kabi.patch
-          echo "📦 应用 POSIX_MQUEUE kABI 补丁..."
-          patch -p1 < posix_kabi.patch
-          
+
+          echo "⬇️ 下载并应用 SYSVIPC kABI 补丁 (5.10 专用 bypass 版本)..."
+          wget https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/droidspaces/fix_sysvipc_kabi_bypass_a16-6.12_below.patch -O fix_sysvipc.patch
+          patch -p1 --forward < fix_sysvipc.patch
+
+          echo "⬇️ 下载并应用 POSIX_MQUEUE kABI 补丁..."
+          wget https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/droidspaces/fix_abi_padding_for_posix_mqueue.patch -O fix_posix.patch
+          patch -p1 --forward < fix_posix.patch
+
+          echo "⬇️ 下载并应用 oplus_bsp_midas panic 修复补丁..."
+          wget https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/droidspaces/0001-Return-ghost-task-if-task-is-null-and-is-requested-b.patch -O fix_midas.patch
+          patch -p1 --forward < fix_midas.patch
+
           echo "✅ Droidspaces kABI 补丁全部应用完成"
 
 
@@ -650,38 +651,14 @@ jobs:
           echo "CONFIG_HEADERS_INSTALL=n" >> ./common/arch/arm64/configs/gki_defconfig
 
 
+          echo "📦 启用 Droidspaces 所需配置 (续航优先，仅保留核心)..."
+          echo "CONFIG_SYSVIPC=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_POSIX_MQUEUE=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_PID_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_DEVTMPFS=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_USER_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
 
-          echo "📦 安全配置 Droidspaces 所需选项 (逐个搜索替换)..."
-          DEFCONFIG=./common/arch/arm64/configs/gki_defconfig
-          set_config() {
-            local cfg="$1"
-            local val="$2"
-            if grep -q "^${cfg}=" "$DEFCONFIG" 2>/dev/null; then
-              sed -i "s/^${cfg}=.*/${cfg}=${val}/" "$DEFCONFIG"
-            elif grep -q "^# ${cfg} is not set" "$DEFCONFIG" 2>/dev/null; then
-              sed -i "s/^# ${cfg} is not set/${cfg}=${val}/" "$DEFCONFIG"
-            else
-              echo "${cfg}=${val}" >> "$DEFCONFIG"
-            fi
-          }
-          # ===== 必需配置 =====
-          # IPC
-          set_config CONFIG_SYSVIPC y
-          set_config CONFIG_POSIX_MQUEUE y
-          # 命名空间
-          set_config CONFIG_IPC_NS y
-          set_config CONFIG_PID_NS y
-          # 硬件访问支持
-          set_config CONFIG_DEVTMPFS y
-          # 网络（增强 NAT 支持）
-          set_config CONFIG_NETFILTER_XT_MATCH_ADDRTYPE y
-          # ===== 可选但建议 =====
-          # 修复 Docker unsafe procfs 错误
-          set_config CONFIG_USER_NS y
-          echo "✅ Droidspaces 配置完成 (逐个搜索替换)"
-
-          
-
+         
           echo "⚡ Remove check_defconfig"
           sed -i 's/check_defconfig//' ./common/build.config.gki
           echo "✅ 内核配置更新完成"
