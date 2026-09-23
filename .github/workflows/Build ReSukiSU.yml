@@ -538,12 +538,12 @@ jobs:
           # 下载 sysvipc 补丁
           wget https://raw.githubusercontent.com/ravindu644/Droidspaces-OSS/refs/heads/main/Documentation/resources/kernel-patches/GKI/below-kernel-6.12/001.GKI-below-6.12-fix_sysvipc_kabi_3_4_5.patch -O sysvipc_kabi.patch
           echo "📦 应用 sysvipc kABI 补丁..."
-          patch -p1 < droidspaces_sysvipc_kabi.patch
+          patch -p1 < sysvipc_kabi.patch
           
           # 下载并应用 posix 补丁（新增）
-          wget https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/main/GKI/5.10/GKI_5.10_posix.patch -O droidspaces_posix_kabi.patch
+          wget https://raw.githubusercontent.com/Goldzxcbug/Droidspaces_Kernel_patch/main/GKI/5.10/GKI_5.10_posix.patch -O posix_kabi.patch
           echo "📦 应用 POSIX_MQUEUE kABI 补丁..."
-          patch -p1 < droidspaces_posix_kabi.patch
+          patch -p1 < posix_kabi.patch
           
           echo "✅ Droidspaces kABI 补丁全部应用完成"
 
