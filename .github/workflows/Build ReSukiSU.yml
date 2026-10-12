@@ -562,24 +562,7 @@ jobs:
           echo "✅ Droidspaces kABI 补丁全部应用完成"
 
 
-      - name: "⚡ Apply NTSync Patches | 应用 NTSync 补丁"
-        run: |
-          set -e
-          cd kernel_workspace/kernel_platform/common
 
-          echo "⬇️ 下载 NTSync 兼容性补丁 (A15 系统 + android12-5.10 内核 -> 使用 A14 变体)..."
-          wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_compat_android12-5.10_A14.patch -O ntsync_compat.patch
-
-          echo "⬇️ 下载 NTSync 基础补丁..."
-          wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_base.patch -O ntsync_base.patch
-
-          echo "📦 应用 NTSync 兼容性补丁..."
-          patch -p1 --forward < ntsync_compat.patch
-
-          echo "📦 应用 NTSync 基础补丁..."
-          patch -p1 --forward < ntsync_base.patch
-
-          echo "✅ NTSync 补丁流程完成"
 
 
       - name: "⚙️ Configure Kernel Options | 配置内核选项"
@@ -691,7 +674,7 @@ jobs:
           echo "CONFIG_DEVTMPFS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_USER_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_NTSYNC=y" >> ./common/arch/arm64/configs/gki_defconfig
-          echo "CONFIG_LOCKDEP=y" >> ./common/arch/arm64/configs/gki_defconfig
+
          
           echo "⚡ Remove check_defconfig"
           sed -i 's/check_defconfig//' ./common/build.config.gki
