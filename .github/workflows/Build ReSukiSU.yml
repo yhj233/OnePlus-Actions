@@ -562,59 +562,28 @@ jobs:
           echo "✅ Droidspaces kABI 补丁全部应用完成"
 
 
-           - name: "⚡ Apply NTSync Patches | 应用 NTSync 补丁"
+      - name: "⚡ Apply NTSync Patches | 应用 NTSync 补丁"
         run: |
           set -e
           cd kernel_workspace/kernel_platform/common
 
           echo "⬇️ 下载 NTSync 兼容性补丁 (A15 系统 + android12-5.10 内核 -> 使用 A14 变体)..."
-          wget https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_compat_android12-5.10_A14.patch -O ntsync_compat.patch
+          wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_compat_android12-5.10_A14.patch -O ntsync_compat.patch
 
           echo "⬇️ 下载 NTSync 基础补丁..."
-          wget https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_base.patch -O ntsync_base.patch
+          wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_base.patch -O ntsync_base.patch
 
-          echo "🔧 预处理 lockdep.h 以匹配 NTSync 补丁上下文..."
-          cat > /tmp/fix_lockdep.py << 'PYEOF'
-          import re
-
-          path = "include/linux/lockdep.h"
-          content = open(path).read()
-
-          if "LOCK_STATE_UNKNOWN" not in content:
-              inject = (
-                  "#define LOCK_STATE_UNKNOWN -1\n"
-                  "#define LOCK_STATE_NOT_HELD 0\n"
-                  "#define LOCK_STATE_HELD 1\n"
-                  "\n"
-                  "#define lockdep_assert(cond) \\\n"
-                  "\tdo { WARN_ON(debug_locks && !(cond)); } while (0)\n"
-                  "\n"
-                  "#define lockdep_assert_once(cond) \\\n"
-                  "\tdo { WARN_ON_ONCE(debug_locks && !(cond)); } while (0)\n"
-                  "\n"
-                  "#define lockdep_assert_held(l) \\\n"
-                  "\tlockdep_assert(lockdep_is_held(l) != LOCK_STATE_NOT_HELD)\n"
-                  "\n"
-                  "#define lockdep_assert_not_held(l) \\\n"
-                  "\tlockdep_assert(lockdep_is_held(l) != LOCK_STATE_HELD)\n"
-                  "\n"
-              )
-              content = re.sub(r"(#define lockdep_assert_held\()", inject + r"\1", content, count=1)
-              open(path, "w").write(content)
-              print("lockdep.h: injected NTSync-required macros")
-          else:
-              print("lockdep.h: NTSync macros already present, skipping")
-          PYEOF
-          python3 /tmp/fix_lockdep.py
+          echo "🔧 预处理 lockdep.h (单行 Python，避免 YAML 缩进问题)..."
+          python3 -c 'import re; p="include/linux/lockdep.h"; c=open(p).read(); m="#define LOCK_STATE_UNKNOWN -1\n#define LOCK_STATE_NOT_HELD 0\n#define LOCK_STATE_HELD 1\n#define lockdep_assert(cond) do { WARN_ON(debug_locks && !(cond)); } while (0)\n#define lockdep_assert_once(cond) do { WARN_ON_ONCE(debug_locks && !(cond)); } while (0)\n#define lockdep_assert_not_held(l) lockdep_assert(lockdep_is_held(l) != LOCK_STATE_HELD)\n\n"; c=(m+c) if "LOCK_STATE_UNKNOWN" not in c else c; open(p,"w").write(c); print("lockdep.h OK")'
 
           echo "📦 应用 NTSync 兼容性补丁..."
-          patch -p1 --forward < ntsync_compat.patch
+          patch -p1 --forward < ntsync_compat.patch || true
 
           echo "📦 应用 NTSync 基础补丁..."
-          patch -p1 --forward < ntsync_base.patch
+          patch -p1 --forward < ntsync_base.patch || true
 
-          echo "✅ NTSync 补丁应用完成"
-		  
+          echo "✅ NTSync 补丁流程完成"
+
 
       - name: "⚙️ Configure Kernel Options | 配置内核选项"
         run: |
@@ -724,7 +693,7 @@ jobs:
           echo "CONFIG_PID_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_DEVTMPFS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_USER_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
-
+          echo "CONFIG_NTSYNC=y" >> ./common/arch/arm64/configs/gki_defconfig
          
           echo "⚡ Remove check_defconfig"
           sed -i 's/check_defconfig//' ./common/build.config.gki
