@@ -225,7 +225,20 @@ jobs:
 
       - name: "⚙️ Initialize ccache | 初始化ccache"
         run: |
+          set -e
           echo "🔧 正在初始化ccache..."
+          if ! command -v ccache >/dev/null 2>&1; then
+             echo "⚠️ ccache 未找到，正在通过 apt 安装..."
+            sudo apt-get update -y
+            sudo apt-get install -y ccache
+          fi
+
+              export PATH="/usr/lib/ccache:$PATH"
+              echo "/usr/lib/ccache" >> "$GITHUB_PATH"
+
+              
+
+          
           INIT_FLAG="${{ env.CCACHE_DIR }}/.ccache_initialized"
           
           if command -v ccache >/dev/null 2>&1; then
