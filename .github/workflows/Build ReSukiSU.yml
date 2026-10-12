@@ -573,9 +573,6 @@ jobs:
           echo "⬇️ 下载 NTSync 基础补丁..."
           wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_base.patch -O ntsync_base.patch
 
-          echo "🔧 预处理 lockdep.h (单行 Python，避免 YAML 缩进问题)..."
-          python3 -c 'import re; p="include/linux/lockdep.h"; c=open(p).read(); m="#define LOCK_STATE_UNKNOWN -1\n#define LOCK_STATE_NOT_HELD 0\n#define LOCK_STATE_HELD 1\n#define lockdep_assert(cond) do { WARN_ON(debug_locks && !(cond)); } while (0)\n#define lockdep_assert_once(cond) do { WARN_ON_ONCE(debug_locks && !(cond)); } while (0)\n#define lockdep_assert_not_held(l) lockdep_assert(lockdep_is_held(l) != LOCK_STATE_HELD)\n\n"; c=(m+c) if "LOCK_STATE_UNKNOWN" not in c else c; open(p,"w").write(c); print("lockdep.h OK")'
-
           echo "📦 应用 NTSync 兼容性补丁..."
           patch -p1 --forward < ntsync_compat.patch || true
 
