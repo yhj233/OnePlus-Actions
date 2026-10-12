@@ -564,6 +564,7 @@ jobs:
 
       - name: "⚡ Apply NTSync Patches | 应用 NTSync 补丁"
         run: |
+          set -e
           cd kernel_workspace/kernel_platform/common
 
           echo "⬇️ 下载 NTSync 兼容性补丁 (A15 系统 + android12-5.10 内核 -> 使用 A14 变体)..."
@@ -571,6 +572,39 @@ jobs:
 
           echo "⬇️ 下载 NTSync 基础补丁..."
           wget https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_base.patch -O ntsync_base.patch
+
+          echo "🔧 预处理 lockdep.h 以匹配 NTSync 补丁上下文..."
+          LOCKDEP=include/linux/lockdep.h
+
+          # 如果尚未包含 LOCK_STATE_* 定义，则插入缺失的宏
+          if ! grep -q "LOCK_STATE_UNKNOWN" "$LOCKDEP"; then
+            echo "  插入缺失的锁状态宏与 lockdep_assert 系列宏..."
+            sed -i '/#define lockdep_assert_held(/,/^$/{
+              i\
+#define LOCK_STATE_UNKNOWN -1\
+#define LOCK_STATE_NOT_HELD 0\
+#define LOCK_STATE_HELD 1\
+\
+#define lockdep_assert(cond) \\\
+	do { WARN_ON(debug_locks && !(cond)); } while (0)\
+\
+#define lockdep_assert_once(cond) \\\
+	do { WARN_ON_ONCE(debug_locks && !(cond)); } while (0)\
+\
+#define lockdep_assert_held(l) \\\
+	lockdep_assert(lockdep_is_held(l) != LOCK_STATE_NOT_HELD)\
+\
+#define lockdep_assert_not_held(l) \\\
+	lockdep_assert(lockdep_is_held(l) != LOCK_STATE_HELD)
+            }' "$LOCKDEP"
+          fi
+
+          # 替换已有的宏定义，使其与补丁期望一致
+          echo "  调整已有 lockdep_assert_held_write/read/once 等宏定义..."
+          sed -i 's|^#define lockdep_assert_held_write(l).*|#define lockdep_assert_held_write(l) \\\n\tlockdep_assert(lockdep_is_held_type(l, 0))|' "$LOCKDEP"
+          sed -i 's|^#define lockdep_assert_held_read(l).*|#define lockdep_assert_held_read(l) \\\n\tlockdep_assert(lockdep_is_held_type(l, 1))|' "$LOCKDEP"
+          sed -i 's|^#define lockdep_assert_held_once(l).*|#define lockdep_assert_held_once(l) \\\n\tlockdep_assert_once(lockdep_is_held(l) != LOCK_STATE_NOT_HELD)|' "$LOCKDEP"
+          sed -i 's|^#define lockdep_assert_none_held_once().*|#define lockdep_assert_none_held_once() \\\n\tlockdep_assert_once(!current->lockdep_depth)|' "$LOCKDEP"
 
           echo "📦 应用 NTSync 兼容性补丁..."
           patch -p1 --forward < ntsync_compat.patch
