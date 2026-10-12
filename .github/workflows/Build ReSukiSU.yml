@@ -574,10 +574,10 @@ jobs:
           wget -q https://raw.githubusercontent.com/WildKernels/kernel_patches/main/common/ntsync/ntsync_base.patch -O ntsync_base.patch
 
           echo "📦 应用 NTSync 兼容性补丁..."
-          patch -p1 --forward < ntsync_compat.patch || true
+          patch -p1 --forward < ntsync_compat.patch
 
           echo "📦 应用 NTSync 基础补丁..."
-          patch -p1 --forward < ntsync_base.patch || true
+          patch -p1 --forward < ntsync_base.patch
 
           echo "✅ NTSync 补丁流程完成"
 
@@ -691,6 +691,7 @@ jobs:
           echo "CONFIG_DEVTMPFS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_USER_NS=y" >> ./common/arch/arm64/configs/gki_defconfig
           echo "CONFIG_NTSYNC=y" >> ./common/arch/arm64/configs/gki_defconfig
+          echo "CONFIG_LOCKDEP=y" >> ./common/arch/arm64/configs/gki_defconfig
          
           echo "⚡ Remove check_defconfig"
           sed -i 's/check_defconfig//' ./common/build.config.gki
